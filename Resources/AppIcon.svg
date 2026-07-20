@@ -1,0 +1,55 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141a2e"/>
+      <stop offset="1" stop-color="#0a0d1a"/>
+    </linearGradient>
+    <linearGradient id="planet" x1="0.2" y1="0.1" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#4aa8f5"/>
+      <stop offset="0.55" stop-color="#2f80e0"/>
+      <stop offset="1" stop-color="#21c48f"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.35" cy="0.3" r="0.9">
+      <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="hilite" cx="0.32" cy="0.26" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="185"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <!-- 星星 -->
+    <circle cx="240" cy="240" r="6" fill="#ffffff" opacity="0.7"/>
+    <circle cx="800" cy="200" r="4" fill="#ffffff" opacity="0.5"/>
+    <circle cx="740" cy="330" r="7" fill="#ffffff" opacity="0.8"/>
+    <circle cx="200" cy="700" r="5" fill="#ffffff" opacity="0.5"/>
+    <circle cx="320" cy="380" r="3" fill="#ffffff" opacity="0.45"/>
+    <circle cx="850" cy="640" r="5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="620" cy="170" r="3" fill="#ffffff" opacity="0.4"/>
+
+    <!-- 轨道环 -->
+    <ellipse cx="512" cy="560" rx="360" ry="120" fill="none" stroke="#f2b24a"
+             stroke-width="16" stroke-opacity="0.55"
+             transform="rotate(-18 512 560)"/>
+
+    <!-- 行星 -->
+    <circle cx="512" cy="540" r="232" fill="url(#planet)"/>
+    <!-- 大陆 -->
+    <path d="M 400 430 q 60 -40 120 -8 q 50 26 96 6 q 40 -18 64 12 q -12 56 -70 62 q -66 8 -108 -14 q -68 -12 -102 -58 z"
+          fill="#37d29a" opacity="0.85"/>
+    <path d="M 430 640 q 46 -28 100 -10 q 54 18 92 -6 q 20 40 -24 66 q -60 34 -122 12 q -44 -18 -46 -62 z"
+          fill="#37d29a" opacity="0.75"/>
+    <!-- 鼹鼠洞:行星上的小洞 -->
+    <ellipse cx="600" cy="470" rx="46" ry="34" fill="#123151" opacity="0.9"/>
+    <ellipse cx="596" cy="462" rx="34" ry="22" fill="#0a1d33"/>
+    <circle cx="512" cy="540" r="232" fill="url(#shade)"/>
+    <circle cx="512" cy="540" r="232" fill="url(#hilite)"/>
+
+  </g>
+</svg>

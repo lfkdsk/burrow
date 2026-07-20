@@ -1,0 +1,76 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      # 以下 Secrets 均为可选:未配置时回退 ad-hoc 签名、跳过公证
+      P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+      P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 导入签名证书(如已配置)
+        run: |
+          if [ -z "$P12_BASE64" ]; then
+            echo "未配置 DEVELOPER_ID_P12_BASE64,将使用 ad-hoc 签名"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          security create-keychain -p ci-password "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p ci-password "$KEYCHAIN"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k ci-password "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: 构建并打包
+        run: ./scripts/package.sh
+
+      - name: 公证并盖章(如已配置)
+        run: |
+          if [ -z "$NOTARY_APPLE_ID" ] || [ -z "$P12_BASE64" ]; then
+            echo "未配置公证凭据,跳过 notarization"
+            exit 0
+          fi
+          ditto -c -k --keepParent dist/Burrow.app dist/Burrow-notarize.zip
+          xcrun notarytool submit dist/Burrow-notarize.zip \
+            --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" \
+            --password "$NOTARY_PASSWORD" \
+            --wait
+          xcrun stapler staple dist/Burrow.app
+          rm dist/Burrow-notarize.zip
+
+      - name: 压缩产物
+        run: ditto -c -k --keepParent dist/Burrow.app dist/Burrow.zip
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Burrow-${{ github.sha }}
+          path: dist/Burrow.zip
+
+      - name: 发布 Release(tag 触发)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Burrow.zip
+          generate_release_notes: true

@@ -1,0 +1,7 @@
+.build/
+dist/
+.DS_Store
+*.xcodeproj
+.swiftpm/
+render_icon
+render_planets
