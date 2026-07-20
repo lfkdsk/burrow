@@ -53,13 +53,31 @@ struct PlanetView: View {
 
     // MARK: 资源加载(带缓存)
 
+    /// 不用 Bundle.module:它找不到资源包时会 fatalError,且不认 Contents/Resources。
+    /// 依次尝试 App 包 Resources、可执行文件旁(swift run)、App 包根目录。
+    private static let resourceBundle: Bundle? = {
+        let bundleName = "Burrow_Burrow.bundle"
+        let candidates: [URL?] = [
+            Bundle.main.resourceURL,
+            Bundle.main.executableURL?.deletingLastPathComponent(),
+            Bundle.main.bundleURL,
+        ]
+        for base in candidates {
+            if let url = base?.appendingPathComponent(bundleName),
+               let bundle = Bundle(url: url) {
+                return bundle
+            }
+        }
+        return nil
+    }()
+
     private static var cache: [String: NSImage] = [:]
 
     private static func image(for planet: Module) -> NSImage? {
         let name = planet.textureName
         if let cached = cache[name] { return cached }
-        guard let url = Bundle.module.url(forResource: name, withExtension: "png",
-                                          subdirectory: "Planets"),
+        guard let url = resourceBundle?.url(forResource: name, withExtension: "png",
+                                            subdirectory: "Planets"),
               let image = NSImage(contentsOf: url) else { return nil }
         cache[name] = image
         return image
