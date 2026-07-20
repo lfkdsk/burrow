@@ -17,6 +17,11 @@ jobs:
       # 以下 Secrets 均为可选:未配置时回退 ad-hoc 签名、跳过公证
       P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
       P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      # 公证方式一(优先):App Store Connect API Key
+      API_KEY_ID: ${{ secrets.APPLE_API_KEY }}
+      API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+      # 公证方式二(后备):Apple ID + App 专用密码
       NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
       NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
       NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
@@ -46,16 +51,28 @@ jobs:
 
       - name: 公证并盖章(如已配置)
         run: |
-          if [ -z "$NOTARY_APPLE_ID" ] || [ -z "$P12_BASE64" ]; then
+          if [ -z "$P12_BASE64" ] || { [ -z "$API_KEY_P8" ] && [ -z "$NOTARY_APPLE_ID" ]; }; then
             echo "未配置公证凭据,跳过 notarization"
             exit 0
           fi
           ditto -c -k --keepParent dist/Burrow.app dist/Burrow-notarize.zip
-          xcrun notarytool submit dist/Burrow-notarize.zip \
-            --apple-id "$NOTARY_APPLE_ID" \
-            --team-id "$NOTARY_TEAM_ID" \
-            --password "$NOTARY_PASSWORD" \
-            --wait
+          if [ -n "$API_KEY_P8" ]; then
+            echo "使用 App Store Connect API Key 公证"
+            printf '%s' "$API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+            xcrun notarytool submit dist/Burrow-notarize.zip \
+              --key "$RUNNER_TEMP/AuthKey.p8" \
+              --key-id "$API_KEY_ID" \
+              --issuer "$API_ISSUER" \
+              --wait
+            rm -f "$RUNNER_TEMP/AuthKey.p8"
+          else
+            echo "使用 Apple ID + App 专用密码公证"
+            xcrun notarytool submit dist/Burrow-notarize.zip \
+              --apple-id "$NOTARY_APPLE_ID" \
+              --team-id "$NOTARY_TEAM_ID" \
+              --password "$NOTARY_PASSWORD" \
+              --wait
+          fi
           xcrun stapler staple dist/Burrow.app
           rm dist/Burrow-notarize.zip
 

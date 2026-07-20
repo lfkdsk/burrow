@@ -20,11 +20,16 @@ base64 -i "$P12" | gh secret set DEVELOPER_ID_P12_BASE64 --repo "$REPO"
 echo "==> 粘贴/输入证书导出密码:"
 gh secret set DEVELOPER_ID_P12_PASSWORD --repo "$REPO"
 
-echo "==> 输入开发者账号的 Apple ID 邮箱:"
-gh secret set NOTARY_APPLE_ID --repo "$REPO"
+echo "==> 公证凭据(App Store Connect API Key)"
+echo "    来自 App Store Connect → 用户和访问 → 集成"
+echo "==> 输入 Key ID(10 位):"
+gh secret set APPLE_API_KEY --repo "$REPO"
 
-echo "==> 输入 App 专用密码(account.apple.com → 登录与安全 → App 专用密码):"
-gh secret set NOTARY_PASSWORD --repo "$REPO"
+echo "==> 输入 Issuer ID(UUID):"
+gh secret set APPLE_API_ISSUER --repo "$REPO"
+
+read -r -p "==> AuthKey_*.p8 文件路径: " P8_PATH
+gh secret set APPLE_API_KEY_P8 --repo "$REPO" < "${P8_PATH/#\~/$HOME}"
 
 gh secret set NOTARY_TEAM_ID --repo "$REPO" --body R6QM7B7GB7
 

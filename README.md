@@ -54,10 +54,14 @@ hardened runtime + timestamp 真实签名,否则回退 ad-hoc(可用 `SIGN_IDENT
 base64 -i cert.p12 | gh secret set DEVELOPER_ID_P12_BASE64
 gh secret set DEVELOPER_ID_P12_PASSWORD   # 输入导出密码
 
-# 2. 公证凭据(App 专用密码在 appleid.apple.com 生成)
-gh secret set NOTARY_APPLE_ID    # Apple ID 邮箱
-gh secret set NOTARY_TEAM_ID     # 如 R6QM7B7GB7
-gh secret set NOTARY_PASSWORD    # App 专用密码
+# 2a. 公证方式一(推荐):App Store Connect API Key
+#     App Store Connect → 用户和访问 → 集成 → 创建 API 密钥(.p8 只能下载一次)
+gh secret set APPLE_API_KEY      # Key ID,10 位字母数字
+gh secret set APPLE_API_ISSUER   # Issuer ID(UUID,页面顶部)
+gh secret set APPLE_API_KEY_P8 < AuthKey_XXXXXXXXXX.p8
+
+# 2b. 公证方式二(后备):Apple ID + App 专用密码(appleid.apple.com 生成)
+gh secret set NOTARY_APPLE_ID NOTARY_TEAM_ID NOTARY_PASSWORD  # 逐个设置
 
 # 3. 发版
 git tag v1.0.0 && git push origin v1.0.0
