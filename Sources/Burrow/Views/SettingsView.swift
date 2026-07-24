@@ -56,16 +56,47 @@ private struct WhitelistSettings: View {
 }
 
 private struct AboutSettings: View {
+    @EnvironmentObject var updater: UpdaterViewModel
+
+    /// 从 App 包读取真实版本号,避免硬编码与实际发布版本脱节。
+    private var versionText: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String
+        if let build, !build.isEmpty {
+            return "v\(short) (\(build))"
+        }
+        return "v\(short)"
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             Spacer()
             PlanetView(planet: .clean, size: 72)
             Text("Burrow").font(.title.bold())
-            Text("v1.0.0").font(.caption).foregroundStyle(.secondary)
+            Text(versionText).font(.caption).foregroundStyle(.secondary)
             Text("Mac 系统维护工具\n清理 · 软件 · 优化 · 分析 · 状态")
                 .font(.callout)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
+
+            VStack(spacing: 8) {
+                Button {
+                    updater.checkForUpdates()
+                } label: {
+                    Label("检查更新", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(!updater.canCheckForUpdates)
+
+                Toggle("自动检查更新", isOn: Binding(
+                    get: { updater.automaticallyChecksForUpdates },
+                    set: { updater.automaticallyChecksForUpdates = $0 }
+                ))
+                .toggleStyle(.checkbox)
+                .font(.callout)
+            }
+            .padding(.top, 4)
+
             Text("灵感来自开源项目 Mole")
                 .font(.caption)
                 .foregroundStyle(.tertiary)

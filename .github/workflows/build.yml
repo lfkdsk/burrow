@@ -79,15 +79,78 @@ jobs:
       - name: 压缩产物
         run: ditto -c -k --keepParent dist/Burrow.app dist/Burrow.zip
 
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v4
-        with:
-          name: Burrow-${{ github.sha }}
-          path: dist/Burrow.zip
-
       - name: 发布 Release(tag 触发)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/Burrow.zip
           generate_release_notes: true
+
+      - name: 生成并提交 appcast(tag 触发)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          # 仅需 Sparkle EdDSA 私钥(scripts/setup_sparkle_keys.sh 导出);
+          # appcast 提交用内置 GITHUB_TOKEN,无需外部 token —— 前提:本仓库已公开
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPARKLE_VERSION: "2.9.4"
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_ED_PRIVATE_KEY:-}" ]; then
+            echo "未配置 SPARKLE_ED_PRIVATE_KEY,跳过 appcast 生成"
+            exit 0
+          fi
+          TAG="${GITHUB_REF_NAME}"
+
+          # 1. 下载 Sparkle 工具取 sign_update(SPM 二进制包不含 CLI 工具,需单独取发行版)
+          curl -sL -o sparkle-tools.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle-tools && tar -xf sparkle-tools.tar.xz -C sparkle-tools
+
+          # 2. 用 sign_update 对更新包做 EdDSA 签名(私钥经 stdin 不落盘),
+          #    再按 App 实际版本手写单条 appcast —— 比 generate_appcast 更可控稳定
+          PLIST=dist/Burrow.app/Contents/Info.plist
+          SHORT=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
+          BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")
+          MINOS=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$PLIST")
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/Burrow.zip"
+          PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
+          SIGLEN=$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" \
+            | sparkle-tools/bin/sign_update --ed-key-file - dist/Burrow.zip \
+            | grep -o 'sparkle:edSignature=.*')
+          if [ -z "$SIGLEN" ]; then echo "!! sign_update 未产出签名" >&2; exit 1; fi
+
+          cat > appcast.xml <<EOF
+          <?xml version="1.0" standalone="yes"?>
+          <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+              <channel>
+                  <title>Burrow</title>
+                  <item>
+                      <title>${SHORT}</title>
+                      <pubDate>${PUBDATE}</pubDate>
+                      <sparkle:version>${BUILD}</sparkle:version>
+                      <sparkle:shortVersionString>${SHORT}</sparkle:shortVersionString>
+                      <sparkle:minimumSystemVersion>${MINOS}</sparkle:minimumSystemVersion>
+                      <enclosure url="${URL}" ${SIGLEN} type="application/octet-stream"/>
+                  </item>
+              </channel>
+          </rss>
+          EOF
+          echo "==> appcast.xml:"; cat appcast.xml
+
+          # 3. 把 appcast.xml 提交到本仓库 main(App 通过 raw 读取);[skip ci] 避免触发新构建
+          git clone --branch main \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" appcast-repo
+          cp appcast.xml appcast-repo/appcast.xml
+          cd appcast-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git commit -m "chore: appcast $TAG [skip ci]" || echo "appcast 无变化,跳过提交"
+          git push origin main
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Burrow-${{ github.sha }}
+          path: dist/Burrow.zip

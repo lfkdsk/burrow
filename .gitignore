@@ -1,5 +1,6 @@
 .build/
 dist/
+sparkle_private_key.txt
 .DS_Store
 *.xcodeproj
 .swiftpm/
