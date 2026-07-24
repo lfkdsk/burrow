@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Burrow</title>
+        <item>
+            <title>1.0.3</title>
+            <pubDate>Fri, 24 Jul 2026 04:20:40 +0000</pubDate>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/lfkdsk/burrow/releases/download/v1.0.3/Burrow.zip" sparkle:edSignature="S5MeAuhGbNWLgKhHw680ZurhQjrYYyr8b8YwTX9rQqf+e4XwgItKkTY5iFzQSQVFsbxaB58rhr74Y57e4i3xDw==" length="3040736" type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>
