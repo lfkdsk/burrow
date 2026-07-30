@@ -110,6 +110,8 @@ extension Module {
     var textureName: String {
         switch self {
         case .clean: return "earth"
+        case .purge: return "saturn"
+        case .installer: return "neptune"
         case .software: return "mars"
         case .optimize: return "mercury"
         case .analyze: return "jupiter"

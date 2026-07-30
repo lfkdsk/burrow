@@ -248,6 +248,126 @@ func jupiterTexture() -> CGImage {
     return ctx.makeImage()!
 }
 
+func saturnTexture() -> CGImage {
+    let ctx = bitmapContext(width: W, height: H)
+    let palette: [CGColor] = [
+        CGColor(red: 0.93, green: 0.86, blue: 0.66, alpha: 1), // 奶油金
+        CGColor(red: 0.86, green: 0.76, blue: 0.53, alpha: 1), // 沙金
+        CGColor(red: 0.79, green: 0.66, blue: 0.44, alpha: 1), // 茶褐
+        CGColor(red: 0.90, green: 0.83, blue: 0.62, alpha: 1), // 亮带
+    ]
+    ctx.setFillColor(palette[0])
+    ctx.fill(CGRect(x: 0, y: 0, width: dW, height: dH))
+    // 柔和的横向条带(比木星更淡更细)
+    var y = 0.0
+    var i = 0
+    while y < dH {
+        let bandHeight = rng.range(28, 56)
+        let color = palette[(i + 1) % palette.count]
+        let amp = rng.range(2, 6)
+        let freq = Double(Int(rng.range(2, 4)))
+        let phase = rng.range(0, .pi * 2)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 0, y: y + Foundation.sin(phase) * amp))
+        var x = 0.0
+        while x <= dW {
+            path.addLine(to: CGPoint(x: x,
+                                     y: y + Foundation.sin(x / dW * .pi * 2 * freq + phase) * amp))
+            x += 16
+        }
+        path.addLine(to: CGPoint(x: dW, y: dH))
+        path.addLine(to: CGPoint(x: 0, y: dH))
+        path.closeSubpath()
+        ctx.addPath(path)
+        ctx.setFillColor(color)
+        ctx.fillPath()
+        y += bandHeight
+        i += 1
+    }
+    // 极淡湍流
+    for _ in 0..<26 {
+        let cx = rng.range(0, dW), cy = rng.range(0, dH)
+        let w = rng.range(40, 150), h = rng.range(3, 7)
+        let bright = rng.next() > 0.5
+        for offset in [-dW, 0, dW] {
+            ctx.setFillColor(bright ? CGColor(gray: 1, alpha: 0.10)
+                                    : CGColor(red: 0.5, green: 0.4, blue: 0.24, alpha: 0.10))
+            ctx.fillEllipse(in: CGRect(x: cx + offset - w / 2, y: cy - h / 2, width: w, height: h))
+        }
+    }
+    return ctx.makeImage()!
+}
+
+/// 土星环:正方形贴图,中心透明,内外半径之间画同心带(含卡西尼缝)。
+func ringTexture() -> CGImage {
+    let size = 512
+    let ctx = bitmapContext(width: size, height: size)
+    ctx.clear(CGRect(x: 0, y: 0, width: size, height: size))
+    let center = CGPoint(x: Double(size) / 2, y: Double(size) / 2)
+    // 贴图平面世界尺寸约 3.8,scale = 512 / 3.8
+    let scale = Double(size) / 3.8
+    let inner = 1.28 * scale
+    let outer = 1.72 * scale
+    let cassini = 1.52 * scale  // 卡西尼缝位置
+    let steps = 260
+    for s in 0..<steps {
+        let t = Double(s) / Double(steps)
+        let r = inner + (outer - inner) * t
+        // 明暗随机细纹 + 卡西尼缝处压暗
+        var alpha = 0.55 + rng.range(-0.12, 0.18)
+        let gapDist = abs(r - cassini)
+        if gapDist < 6 * scale / 100 { alpha *= 0.15 }
+        alpha = max(0, min(0.9, alpha))
+        let tone = 0.72 + rng.range(-0.08, 0.14)
+        ctx.setStrokeColor(CGColor(red: tone, green: tone * 0.9, blue: tone * 0.66, alpha: alpha))
+        ctx.setLineWidth((outer - inner) / Double(steps) + 0.8)
+        ctx.addArc(center: center, radius: r, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+        ctx.strokePath()
+    }
+    return ctx.makeImage()!
+}
+
+func neptuneTexture() -> CGImage {
+    let ctx = bitmapContext(width: W, height: H)
+    let base = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+                          colors: [
+                            CGColor(red: 0.20, green: 0.36, blue: 0.78, alpha: 1),
+                            CGColor(red: 0.16, green: 0.30, blue: 0.70, alpha: 1),
+                            CGColor(red: 0.10, green: 0.20, blue: 0.54, alpha: 1),
+                          ] as CFArray, locations: [0, 0.5, 1])!
+    ctx.drawLinearGradient(base, start: .zero, end: CGPoint(x: 0, y: dH), options: [])
+    // 深浅蓝色纬向条带
+    var y = 0.0
+    var i = 0
+    let bands: [CGColor] = [
+        CGColor(red: 0.30, green: 0.48, blue: 0.88, alpha: 0.5),
+        CGColor(red: 0.12, green: 0.24, blue: 0.60, alpha: 0.5),
+    ]
+    while y < dH {
+        let bandHeight = rng.range(30, 60)
+        ctx.setFillColor(bands[i % bands.count])
+        ctx.fill(CGRect(x: 0, y: y, width: dW, height: bandHeight * 0.6))
+        y += bandHeight
+        i += 1
+    }
+    // 高空白色云缕
+    for _ in 0..<20 {
+        let cx = rng.range(0, dW), cy = rng.range(0, dH)
+        let w = rng.range(40, 130), h = rng.range(3, 7)
+        for offset in [-dW, 0, dW] {
+            ctx.setFillColor(CGColor(gray: 1, alpha: 0.14))
+            ctx.fillEllipse(in: CGRect(x: cx + offset - w / 2, y: cy - h / 2, width: w, height: h))
+        }
+    }
+    // 大暗斑(海王星标志性风暴)
+    let spot = CGPoint(x: dW * 0.36, y: dH * 0.4)
+    ctx.setFillColor(CGColor(red: 0.06, green: 0.12, blue: 0.36, alpha: 0.85))
+    ctx.fillEllipse(in: CGRect(x: spot.x - 60, y: spot.y - 30, width: 120, height: 60))
+    ctx.setFillColor(CGColor(red: 0.10, green: 0.18, blue: 0.46, alpha: 0.7))
+    ctx.fillEllipse(in: CGRect(x: spot.x - 40, y: spot.y - 20, width: 80, height: 40))
+    return ctx.makeImage()!
+}
+
 func sunTexture() -> CGImage {
     let ctx = bitmapContext(width: W, height: H)
     let base = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -300,6 +420,7 @@ struct PlanetSpec {
     var glow: (NSColor, Double, Double)? // (颜色, 壳半径, 透明度)
     var cameraZ = 3.03
     var bloom = 0.7
+    var rings = false             // 土星:环
 }
 
 let specs: [PlanetSpec] = [
@@ -318,6 +439,13 @@ let specs: [PlanetSpec] = [
                euler: SCNVector3(0, 0.8, 0),
                glow: (NSColor(calibratedRed: 1.0, green: 0.68, blue: 0.20, alpha: 1), 1.15, 0.5),
                cameraZ: 3.83, bloom: 0.9),
+    PlanetSpec(name: "saturn", texture: saturnTexture, roughness: 0.55,
+               euler: SCNVector3(0.12, 3.0, 0.04),
+               glow: (NSColor(calibratedRed: 1.0, green: 0.9, blue: 0.6, alpha: 1), 1.05, 0.08),
+               cameraZ: 4.7, bloom: 0.6, rings: true),
+    PlanetSpec(name: "neptune", texture: neptuneTexture, roughness: 0.46,
+               euler: SCNVector3(0.1, 1.4, 0),
+               glow: (NSColor(calibratedRed: 0.4, green: 0.6, blue: 1.0, alpha: 1), 1.06, 0.18)),
 ]
 
 func render(_ spec: PlanetSpec) -> NSImage {
@@ -355,6 +483,21 @@ func render(_ spec: PlanetSpec) -> NSImage {
         cm.writesToDepthBuffer = false
         cloudSphere.materials = [cm]
         scene.rootNode.addChildNode(SCNNode(geometry: cloudSphere))
+    }
+
+    if spec.rings {
+        // 平面 + 环形透明贴图,绕 X 大角度倾斜成椭圆环
+        let plane = SCNPlane(width: 3.8, height: 3.8)
+        let pm = SCNMaterial()
+        pm.lightingModel = .lambert
+        pm.diffuse.contents = ringTexture()
+        pm.isDoubleSided = true
+        pm.blendMode = .alpha
+        pm.writesToDepthBuffer = true
+        plane.materials = [pm]
+        let ringNode = SCNNode(geometry: plane)
+        ringNode.eulerAngles = SCNVector3(-1.15, 0.0, 0.30)
+        scene.rootNode.addChildNode(ringNode)
     }
 
     if let (color, radius, alpha) = spec.glow {
@@ -458,7 +601,11 @@ if CommandLine.arguments.contains("--jupiter-sweep") {
     exit(0)
 }
 
-for spec in specs {
+// 可选:仅渲染指定行星,如 `./render_planets 输出目录 saturn neptune`
+let requested = Array(CommandLine.arguments.dropFirst(2)).filter { !$0.hasPrefix("--") }
+let toRender = requested.isEmpty ? specs : specs.filter { requested.contains($0.name) }
+
+for spec in toRender {
     let image = render(spec)
     guard let tiff = image.tiffRepresentation,
           let rep = NSBitmapImageRep(data: tiff),

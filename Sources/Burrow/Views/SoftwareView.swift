@@ -171,23 +171,34 @@ struct SoftwareView: View {
                     .scrollContentBackground(.hidden)
 
                     Divider()
-                    HStack {
-                        Text("共 \(engine.totalSelectedSize.humanSize)")
-                            .font(.callout.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button {
-                            showConfirm = true
-                        } label: {
-                            Label("卸载", systemImage: "trash")
-                                .padding(.horizontal, 10)
+                    if app.isProtected {
+                        HStack(spacing: 8) {
+                            Image(systemName: "lock.shield.fill").foregroundStyle(.green)
+                            Text("\(app.name) 是受保护的安全 / 管理软件,已禁止从此处卸载。")
+                                .font(.callout).foregroundStyle(.secondary)
+                            Spacer()
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Module.software.accent)
-                        .disabled(!engine.includeAppBundle && engine.residues.allSatisfy { !$0.isSelected })
+                        .padding(12)
+                        .background(.bar)
+                    } else {
+                        HStack {
+                            Text("共 \(engine.totalSelectedSize.humanSize)")
+                                .font(.callout.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button {
+                                showConfirm = true
+                            } label: {
+                                Label("卸载", systemImage: "trash")
+                                    .padding(.horizontal, 10)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Module.software.accent)
+                            .disabled(!engine.includeAppBundle && engine.residues.allSatisfy { !$0.isSelected })
+                        }
+                        .padding(12)
+                        .background(.bar)
                     }
-                    .padding(12)
-                    .background(.bar)
                 }
             }
         } else {
@@ -253,7 +264,15 @@ private struct AppRow: View {
             Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                 .resizable().frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 1) {
-                Text(app.name).font(.callout)
+                HStack(spacing: 5) {
+                    Text(app.name).font(.callout)
+                    if app.isProtected {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                            .help("受保护的安全 / 管理软件,已禁止卸载")
+                    }
+                }
                 if let version = app.version {
                     Text("v" + version).font(.caption2).foregroundStyle(.tertiary)
                 }

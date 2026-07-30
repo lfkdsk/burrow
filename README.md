@@ -1,26 +1,30 @@
 # Burrow 🪐
 
-> Mac 原生系统维护工具 — 清理 · 软件 · 优化 · 分析 · 状态
+> Mac 原生系统维护工具 — 清理 · 工程 · 安装包 · 软件 · 优化 · 分析 · 状态
 >
 > 灵感来自开源项目 [Mole](https://github.com/tw93/mole)(鼹鼠),Burrow 是鼹鼠深挖的洞穴。
 > 纯 SwiftUI 实现,仅依赖 [Sparkle](https://sparkle-project.org)(自动更新)。
 
-## 五大模块(行星主题)
+## 七大模块(行星主题)
 
 | 模块 | 行星 | 功能 |
 |------|------|------|
-| 清理 | Earth | 扫描应用缓存、日志、开发者缓存(DerivedData / npm / gradle / cargo)、系统残留、废纸篓;逐项确认后清理,默认移入废纸篓可恢复 |
-| 软件 | Mars | 应用卸载:在 15+ 个 Library 目录中检测残留(Application Support、Containers、Preferences、LaunchAgents 等);启动项管理 |
+| 清理 | Earth | 扫描应用缓存、日志、开发者缓存(DerivedData / npm / pnpm / gradle / cargo / VS Code 等)、系统残留、**孤儿启动项**(指向已删程序的 LaunchAgent)、废纸篓;逐项确认后清理,默认移入废纸篓可恢复 |
+| 工程 | Saturn | 递归扫描项目构建产物与依赖(`node_modules` / `.build` / `target` / `Pods` / `.gradle` / `__pycache__` 等),靠「工程标记文件」启发式判定避免误伤,命中即剪枝 |
+| 安装包 | Neptune | 查找下载 / 桌面 / 缓存里遗留的 `dmg` / `pkg` / `iso` / `xip` 安装包,默认勾选超过 30 天未改动的旧包 |
+| 软件 | Mars | 应用卸载:在 15+ 个 Library 目录中检测残留(Application Support、Containers、Preferences、LaunchAgents 等);启动项管理;**EDR / MDM 安全软件受保护禁止卸载** |
 | 优化 | Mercury | 重建 Quick Look / Launch Services / Spotlight、刷新 DNS、释放内存、清理 .DS_Store,带执行日志,需要管理员权限的任务由系统弹窗授权 |
-| 分析 | Jupiter | Squarified 树图磁盘可视化,单击钻取目录、面包屑导航、右键 Finder 显示 / 移到废纸篓 |
+| 分析 | Jupiter | Squarified 树图磁盘可视化,单击钻取目录、面包屑导航、**当前目录 `/` 增量过滤**、右键 Finder 显示 / 移到废纸篓 |
 | 状态 | Sun | 实时监控:CPU(host_processor_info)、内存 / 交换(vm_statistics64)、网络速率(getifaddrs)、磁盘、电池(IOKit,循环次数与健康度)、Top 进程,60 秒走势图 |
 
-另有 **菜单栏 HUD**:常驻显示 CPU 占用,下拉面板展示迷你 bento 指标卡。
+另有 **菜单栏 HUD**:常驻显示 CPU 占用,下拉面板展示迷你 bento 指标卡。**操作历史**:清理 / 工程 / 安装包 / 卸载等操作自动记录,设置窗口「历史」页查看累计释放量。
 
 ## 安全设计
 
 - 清理默认「移到废纸篓」,可随时恢复;仅清空废纸篓为永久删除且默认不勾选、需二次确认
 - 关键系统缓存(CloudKit、FileProvider、HomeKit 等)硬编码保护,绝不列出
+- 端点安全 / MDM 软件(CrowdStrike、SentinelOne、Jamf、ESET 等)受保护,禁止从「软件」模块卸载
+- 工程构建产物仅匹配带工程标记(package.json / Package.swift / Cargo.toml 等)的目录,`dist` / `build` / `venv` 等宽泛名默认不勾选
 - 白名单:右键任意扫描条目「加入白名单」,设置窗口可管理
 - 应用名残留匹配要求精确,bundle id 匹配要求前缀/包含,避免误伤
 
@@ -106,11 +110,14 @@ Sources/Burrow/
 ├── Theme.swift              # 模块/行星定义、bento 卡片样式
 ├── Services/
 │   ├── DiskUtils.swift      # 磁盘大小计算、废纸篓、Shell(含管理员授权)、白名单
-│   ├── CleanService.swift   # 清理扫描引擎(5 类目标)
-│   ├── UninstallService.swift # 应用列表、残留检测、启动项
+│   ├── CleanService.swift   # 清理扫描引擎(缓存/日志/开发者/系统/孤儿启动项/废纸篓)
+│   ├── PurgeService.swift   # 工程构建产物扫描(工程标记启发式)
+│   ├── InstallerService.swift # 遗留安装包扫描(dmg/pkg/iso/xip)
+│   ├── UninstallService.swift # 应用列表、残留检测、启动项、EDR 保护
 │   ├── OptimizeService.swift  # 7 项维护任务
 │   ├── AnalyzeService.swift   # 文件树扫描 + squarified treemap 布局
 │   ├── StatusMonitor.swift    # mach / sysctl / IOKit 系统采样
+│   ├── OperationLog.swift     # 操作历史持久化
 │   └── UpdaterService.swift   # Sparkle 自动更新封装(菜单/设置入口)
 └── Views/                   # 各模块 SwiftUI 视图 + 行星动画
 ```

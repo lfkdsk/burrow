@@ -7,6 +7,7 @@ enum CleanCategory: String, CaseIterable, Identifiable {
     case logs = "日志文件"
     case developer = "开发者缓存"
     case system = "系统残留"
+    case orphaned = "孤儿启动项"
     case trash = "废纸篓"
 
     var id: String { rawValue }
@@ -17,6 +18,7 @@ enum CleanCategory: String, CaseIterable, Identifiable {
         case .logs: return "doc.text.fill"
         case .developer: return "hammer.fill"
         case .system: return "gearshape.2.fill"
+        case .orphaned: return "bolt.slash.fill"
         case .trash: return "trash.fill"
         }
     }
@@ -25,8 +27,9 @@ enum CleanCategory: String, CaseIterable, Identifiable {
         switch self {
         case .appCaches: return "~/Library/Caches 下的应用缓存,删除后应用会自动重建"
         case .logs: return "应用与系统日志,可安全清除"
-        case .developer: return "Xcode DerivedData、模拟器缓存、npm / gradle / cargo 等包管理缓存"
+        case .developer: return "Xcode、npm / pnpm / gradle / cargo / VS Code 等开发者缓存与包索引"
         case .system: return "窗口恢复状态、崩溃报告等系统残留"
+        case .orphaned: return "指向已删除程序的登录启动代理,可安全移除"
         case .trash: return "清空废纸篓将永久删除文件,不可恢复"
         }
     }
@@ -140,11 +143,19 @@ final class CleanEngine: ObservableObject {
         case .developer:
             let candidates: [(String, String)] = [
                 ("Library/Developer/Xcode/DerivedData", "Xcode DerivedData"),
+                ("Library/Developer/Xcode/iOS DeviceSupport", "iOS 设备调试符号"),
                 ("Library/Developer/CoreSimulator/Caches", "模拟器缓存"),
                 (".npm/_cacache", "npm 缓存"),
                 (".yarn/berry/cache", "Yarn 缓存"),
+                ("Library/pnpm/store", "pnpm 全局存储"),
                 (".gradle/caches", "Gradle 缓存"),
                 (".cargo/registry/cache", "Cargo 缓存"),
+                (".m2/repository", "Maven 仓库缓存"),
+                (".ivy2/cache", "Ivy / sbt 缓存"),
+                ("go/pkg/mod/cache", "Go 模块下载缓存"),
+                (".pub-cache", "Dart / Flutter 缓存"),
+                (".android/cache", "Android 构建缓存"),
+                ("Library/Application Support/Code/CachedData", "VS Code 缓存"),
                 (".cache", "XDG 通用缓存 (~/.cache)"),
             ]
             for (path, name) in candidates {
@@ -156,6 +167,16 @@ final class CleanEngine: ObservableObject {
                    name: "窗口恢复状态", minSize: 1024)
             append(home.appendingPathComponent("Library/Application Support/CrashReporter"),
                    name: "崩溃报告", minSize: 1)
+
+        case .orphaned:
+            let agentsDir = home.appendingPathComponent("Library/LaunchAgents")
+            for child in DiskUtils.children(of: agentsDir) where child.pathExtension == "plist" {
+                guard let dict = NSDictionary(contentsOf: child),
+                      let program = Self.launchProgramPath(dict),
+                      !FileManager.default.fileExists(atPath: program) else { continue }
+                let label = (dict["Label"] as? String) ?? child.deletingPathExtension().lastPathComponent
+                append(child, name: "\(label)(指向已删除程序)", minSize: 0)
+            }
 
         case .trash:
             // 默认不勾选:清空废纸篓是永久删除
@@ -197,6 +218,9 @@ final class CleanEngine: ObservableObject {
                 }
             }
 
+            OperationLog.shared.record(module: Module.clean.title,
+                                       detail: "清理缓存、日志与残留 \(report.itemCount) 项",
+                                       itemCount: report.itemCount, freedBytes: report.freedBytes)
             let final = report
             await MainActor.run {
                 self.report = final
@@ -204,6 +228,21 @@ final class CleanEngine: ObservableObject {
                 self.groups = []
             }
         }
+    }
+
+    /// 从 LaunchAgent plist 解析出可执行文件的绝对路径;无法确定绝对路径时返回 nil
+    /// (相对命令 / PATH 查找的程序无法可靠判定存在性,保守跳过,避免误判为孤儿)。
+    static func launchProgramPath(_ dict: NSDictionary) -> String? {
+        func absolute(_ p: String) -> String? {
+            if p.hasPrefix("/") { return p }
+            if p.hasPrefix("~") { return (p as NSString).expandingTildeInPath }
+            return nil
+        }
+        if let program = dict["Program"] as? String { return absolute(program) }
+        if let args = dict["ProgramArguments"] as? [String], let first = args.first {
+            return absolute(first)
+        }
+        return nil
     }
 
     // MARK: 选择操作

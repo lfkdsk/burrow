@@ -5,10 +5,68 @@ struct SettingsView: View {
         TabView {
             WhitelistSettings()
                 .tabItem { Label("白名单", systemImage: "checkmark.shield") }
+            HistorySettings()
+                .tabItem { Label("历史", systemImage: "clock.arrow.circlepath") }
             AboutSettings()
                 .tabItem { Label("关于", systemImage: "info.circle") }
         }
-        .frame(width: 460, height: 360)
+        .frame(width: 480, height: 380)
+    }
+}
+
+private struct HistorySettings: View {
+    @ObservedObject private var log = OperationLog.shared
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MM-dd HH:mm"
+        return f
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("累计释放 \(log.totalFreed.humanSize) · 共 \(log.records.count) 条记录")
+                    .font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                if !log.records.isEmpty {
+                    Button("清空历史") { log.clear() }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+            if log.records.isEmpty {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text("暂无操作记录\n清理 / 卸载等操作会自动记录在这里")
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                Spacer()
+            } else {
+                List(log.records) { rec in
+                    HStack(spacing: 10) {
+                        Text(rec.module)
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(rec.detail).font(.callout).lineLimit(1)
+                            Text(Self.dateFormatter.string(from: rec.date))
+                                .font(.caption2).foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Text(rec.freedBytes.humanSize)
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(16)
     }
 }
 
@@ -75,7 +133,7 @@ private struct AboutSettings: View {
             PlanetView(planet: .clean, size: 72)
             Text("Burrow").font(.title.bold())
             Text(versionText).font(.caption).foregroundStyle(.secondary)
-            Text("Mac 系统维护工具\n清理 · 软件 · 优化 · 分析 · 状态")
+            Text("Mac 系统维护工具\n清理 · 工程 · 安装包 · 软件 · 优化 · 分析 · 状态")
                 .font(.callout)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

@@ -37,6 +37,8 @@ struct RootView: View {
             Group {
                 switch selection ?? .clean {
                 case .clean: CleanView()
+                case .purge: PurgeView()
+                case .installer: InstallerView()
                 case .software: SoftwareView()
                 case .optimize: OptimizeView()
                 case .analyze: AnalyzeView()
