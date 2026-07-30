@@ -3,6 +3,7 @@ import AppKit
 
 struct AnalyzeView: View {
     @StateObject private var engine = AnalyzeEngine()
+    @State private var filter = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -118,40 +119,66 @@ struct AnalyzeView: View {
                 .padding(6)
 
                 // 侧栏列表
-                List {
-                    ForEach(current.children.prefix(200).map { $0 }) { child in
-                        HStack(spacing: 8) {
-                            Image(systemName: child.isDirectory ? "folder.fill" : "doc")
-                                .foregroundStyle(child.isDirectory ? Module.analyze.accent : .secondary)
-                                .font(.caption)
-                            Text(child.name).font(.callout).lineLimit(1)
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(child.size.humanSize)
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(.secondary)
-                                ProgressView(value: current.size > 0
-                                             ? Double(child.size) / Double(current.size) : 0)
-                                    .progressViewStyle(.linear)
-                                    .frame(width: 56)
-                                    .tint(Module.analyze.accent)
+                VStack(spacing: 0) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.caption).foregroundStyle(.tertiary)
+                        TextField("过滤当前目录…", text: $filter)
+                            .textFieldStyle(.plain)
+                        if !filter.isEmpty {
+                            Button { filter = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
                             }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if child.isDirectory { engine.drill(into: child) }
-                        }
-                        .contextMenu {
-                            Button("在 Finder 中显示") { DiskUtils.revealInFinder(child.url) }
-                            Button("移到废纸篓", role: .destructive) { engine.trash(child) }
+                            .buttonStyle(.plain).foregroundStyle(.tertiary)
                         }
                     }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    Divider()
+                    List {
+                        ForEach(filteredChildren(current)) { child in
+                            HStack(spacing: 8) {
+                                Image(systemName: child.isDirectory ? "folder.fill" : "doc")
+                                    .foregroundStyle(child.isDirectory ? Module.analyze.accent : .secondary)
+                                    .font(.caption)
+                                Text(child.name).font(.callout).lineLimit(1)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(child.size.humanSize)
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                    ProgressView(value: current.size > 0
+                                                 ? Double(child.size) / Double(current.size) : 0)
+                                        .progressViewStyle(.linear)
+                                        .frame(width: 56)
+                                        .tint(Module.analyze.accent)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if child.isDirectory { engine.drill(into: child) }
+                            }
+                            .contextMenu {
+                                Button("在 Finder 中显示") { DiskUtils.revealInFinder(child.url) }
+                                Button("移到废纸篓", role: .destructive) { engine.trash(child) }
+                            }
+                        }
+                    }
+                    .listStyle(.inset)
+                    .scrollContentBackground(.hidden)
                 }
-                .listStyle(.inset)
-                .scrollContentBackground(.hidden)
                 .frame(minWidth: 240, idealWidth: 280)
+                .onChange(of: current.id) { _, _ in filter = "" }
             }
         }
+    }
+
+    /// 当前目录子项按关键字增量过滤(对标 mole analyze 的 `/` 过滤)。
+    private func filteredChildren(_ current: FileNode) -> [FileNode] {
+        let keyword = filter.trimmingCharacters(in: .whitespaces)
+        let base = keyword.isEmpty
+            ? current.children
+            : current.children.filter { $0.name.localizedCaseInsensitiveContains(keyword) }
+        return Array(base.prefix(200))
     }
 }
 

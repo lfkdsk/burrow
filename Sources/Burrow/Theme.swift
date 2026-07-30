@@ -4,6 +4,8 @@ import SwiftUI
 
 enum Module: String, CaseIterable, Identifiable {
     case clean
+    case purge
+    case installer
     case software
     case optimize
     case analyze
@@ -14,6 +16,8 @@ enum Module: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .clean: return "清理"
+        case .purge: return "工程"
+        case .installer: return "安装包"
         case .software: return "软件"
         case .optimize: return "优化"
         case .analyze: return "分析"
@@ -24,6 +28,8 @@ enum Module: String, CaseIterable, Identifiable {
     var planetName: String {
         switch self {
         case .clean: return "Earth"
+        case .purge: return "Saturn"
+        case .installer: return "Neptune"
         case .software: return "Mars"
         case .optimize: return "Mercury"
         case .analyze: return "Jupiter"
@@ -34,6 +40,8 @@ enum Module: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .clean: return "深度清理缓存、日志与残留"
+        case .purge: return "清理项目构建产物与依赖缓存"
+        case .installer: return "查找并移除遗留的大安装包"
         case .software: return "卸载应用与管理启动项"
         case .optimize: return "刷新缓存、重建系统索引"
         case .analyze: return "磁盘空间可视化探索"
@@ -46,6 +54,10 @@ enum Module: String, CaseIterable, Identifiable {
         switch self {
         case .clean: // 地球:蓝绿
             return [Color(red: 0.23, green: 0.51, blue: 0.96), Color(red: 0.13, green: 0.77, blue: 0.58)]
+        case .purge: // 土星:淡金褐(带环)
+            return [Color(red: 0.92, green: 0.83, blue: 0.58), Color(red: 0.78, green: 0.62, blue: 0.38)]
+        case .installer: // 海王星:靛蓝
+            return [Color(red: 0.34, green: 0.46, blue: 0.92), Color(red: 0.14, green: 0.22, blue: 0.60)]
         case .software: // 火星:红橙
             return [Color(red: 0.95, green: 0.45, blue: 0.29), Color(red: 0.76, green: 0.22, blue: 0.18)]
         case .optimize: // 水星:银灰
@@ -62,6 +74,8 @@ enum Module: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .clean: return "sparkles"
+        case .purge: return "hammer.fill"
+        case .installer: return "shippingbox.fill"
         case .software: return "app.badge"
         case .optimize: return "bolt.fill"
         case .analyze: return "chart.pie.fill"

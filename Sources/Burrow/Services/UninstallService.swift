@@ -13,6 +13,31 @@ struct AppInfo: Identifiable, Hashable {
 
     static func == (lhs: AppInfo, rhs: AppInfo) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    /// 是否为受保护的端点安全 / MDM 软件(EDR),不应从工具里卸载。对标 mole v1.44.1。
+    var isProtected: Bool {
+        let id = bundleID?.lowercased() ?? ""
+        if SecurityGuard.protectedBundlePrefixes.contains(where: { id.hasPrefix($0) }) { return true }
+        let n = name.lowercased()
+        return SecurityGuard.protectedNameKeywords.contains { n.contains($0) }
+    }
+}
+
+/// 端点安全 / MDM 软件保护名单——这些软件被组织策略托管,误删会导致设备失管或触发告警。
+enum SecurityGuard {
+    static let protectedBundlePrefixes: [String] = [
+        "com.crowdstrike", "com.sentinelone", "com.jamf", "com.jamfsoftware",
+        "com.eset", "com.microsoft.wdav", "com.microsoft.autoupdate.defender",
+        "com.carbonblack", "com.vmware.carbonblack", "com.paloaltonetworks",
+        "com.cisco.amp", "com.cisco.anyconnect", "com.sophos", "com.mcafee",
+        "com.trendmicro", "com.symantec", "com.bitdefender", "org.osquery",
+        "com.malwarebytes", "com.zscaler", "com.netskope", "com.tanium",
+    ]
+    static let protectedNameKeywords: [String] = [
+        "crowdstrike", "falcon", "sentinelone", "jamf", "eset", "carbon black",
+        "cortex xdr", "sophos", "mcafee", "trend micro", "bitdefender",
+        "malwarebytes", "zscaler", "netskope", "tanium", "microsoft defender",
+    ]
 }
 
 struct ResidueItem: Identifiable {
@@ -182,6 +207,10 @@ final class UninstallEngine: ObservableObject {
 
     func uninstall() {
         guard let app = selectedApp else { return }
+        guard !app.isProtected else {
+            resultMessage = "\(app.name) 是受保护的安全 / 管理软件,已阻止卸载"
+            return
+        }
         let selected = residues.filter(\.isSelected)
         let includeBundle = includeAppBundle
 
@@ -189,16 +218,23 @@ final class UninstallEngine: ObservableObject {
             guard let self else { return }
             var errors: [String] = []
             var count = 0
+            var freed: Int64 = 0
             if includeBundle {
-                do { try DiskUtils.trash(app.url); count += 1 } catch {
+                do {
+                    try DiskUtils.trash(app.url); count += 1
+                    if app.size > 0 { freed += app.size }
+                } catch {
                     errors.append("应用本体:\(error.localizedDescription)")
                 }
             }
             for item in selected {
-                do { try DiskUtils.trash(item.url); count += 1 } catch {
+                do { try DiskUtils.trash(item.url); count += 1; freed += item.size } catch {
                     errors.append("\(item.url.lastPathComponent):\(error.localizedDescription)")
                 }
             }
+            OperationLog.shared.record(module: Module.software.title,
+                                       detail: "卸载 \(app.name)",
+                                       itemCount: count, freedBytes: freed)
             let message = errors.isEmpty
                 ? "已将 \(count) 项移至废纸篓"
                 : "完成 \(count) 项,失败:\(errors.joined(separator: ";"))"
