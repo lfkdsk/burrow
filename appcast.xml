@@ -3,12 +3,12 @@
     <channel>
         <title>Burrow</title>
         <item>
-            <title>1.0.3</title>
-            <pubDate>Fri, 24 Jul 2026 04:20:40 +0000</pubDate>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+            <title>1.1.0</title>
+            <pubDate>Thu, 30 Jul 2026 05:48:22 +0000</pubDate>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/lfkdsk/burrow/releases/download/v1.0.3/Burrow.zip" sparkle:edSignature="S5MeAuhGbNWLgKhHw680ZurhQjrYYyr8b8YwTX9rQqf+e4XwgItKkTY5iFzQSQVFsbxaB58rhr74Y57e4i3xDw==" length="3040736" type="application/octet-stream"/>
+            <enclosure url="https://github.com/lfkdsk/burrow/releases/download/v1.1.0/Burrow.zip" sparkle:edSignature="22BL4uGet432Xlda0q4hyag5OIHsaGAP9z6ToYUaAzuwso/oRtsRgcVs5bhPAn/SElvJ/2yenbK76nUE6dw4Cg==" length="3502795" type="application/octet-stream"/>
         </item>
     </channel>
 </rss>
